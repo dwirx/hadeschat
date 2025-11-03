@@ -11,7 +11,9 @@ A modern AI chat application with powerful RAG (Retrieval-Augmented Generation) 
 - 🗄️ **Local Storage**: All data stored securely in IndexedDB (browser-side)
 - 📱 **Responsive Design**: Works seamlessly on desktop and mobile
 - ⚡ **Real-time Streaming**: Get AI responses in real-time
-- 🔒 **Privacy First**: Document processing happens locally in your browser
+- 🔒 **Enterprise-Grade Security**: SHA-256 hashing, rate limiting, session timeout, anti-bypass protection
+- 🛡️ **Brute Force Protection**: Max 5 login attempts, 15-minute lockout with countdown timer
+- 🔐 **Privacy First**: Document processing happens locally in your browser
 - 📊 **Smart Citations**: AI references specific documents in responses
 - 🆓 **Free Models Available**: Access free AI models via OpenRouter
 
@@ -39,8 +41,8 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-# Password Protection (Required)
-VITE_APP_PASSWORD=test123
+# Password Protection (Required - Use strong password in production!)
+VITE_APP_PASSWORD=YourSecurePassword123!
 
 # At least one API key is required
 
@@ -387,12 +389,31 @@ Contributions are welcome! Please follow the guidelines in [AGENTS.md](./AGENTS.
 
 ## 🔐 Security & Privacy
 
-### Password Protection
-- Application is protected with a password set in `.env` file
-- Password must be entered on first access
-- Authentication persists in browser session storage
-- Session is cleared when browser tab is closed
-- **Change the default password in production!**
+### Password Protection (Enterprise-Grade 🔒)
+
+**Multi-Layer Security Features:**
+- ✅ **SHA-256 Password Hashing** - Passwords never stored in plain text
+- ✅ **Rate Limiting** - Max 5 login attempts with 15-minute lockout
+- ✅ **Session Timeout** - Auto-logout after 60 minutes of inactivity
+- ✅ **Encrypted Session Storage** - Session data encrypted with random tokens
+- ✅ **Anti-Bypass Protection** - Detects and prevents console manipulation
+- ✅ **Timing Attack Prevention** - Consistent response times prevent password guessing
+- ✅ **Storage Manipulation Detection** - Auto-reload on unauthorized changes
+- ✅ **DevTools Detection** - Warns when developer tools are opened
+
+**How It Works:**
+1. Password set in `.env` file (never committed to Git)
+2. Password hashed with SHA-256 before comparison
+3. Failed attempts tracked - account locks after 5 failures
+4. Session expires automatically after 60 minutes
+5. All session data encrypted with unique random tokens
+
+**For More Details:**
+- See `PASSWORD_SETUP.md` for setup guide
+- See `SECURITY_FEATURES.md` for technical details
+- See `PANDUAN_KEAMANAN.md` for Indonesian guide
+
+**⚠️ IMPORTANT:** Always use a strong password in production! (12+ characters, mixed case, numbers, symbols)
 
 ### Data Storage
 - All data stored locally in browser IndexedDB
@@ -406,12 +427,22 @@ Contributions are welcome! Please follow the guidelines in [AGENTS.md](./AGENTS.
 - HTTPS encryption for all API calls
 - Document content sent to AI providers only during generation
 
-### Best Practices
-- **Change VITE_APP_PASSWORD from default value**
-- Use `.env` file for API keys (never commit)
-- Clear browser data when using shared computers
-- Review AI provider privacy policies
-- Use private/incognito mode for sensitive documents
+### Security Best Practices
+- ✅ **Use strong passwords** - Minimum 12 characters with mixed case, numbers, and symbols
+- ✅ **Never commit `.env`** - Already in `.gitignore`, keep it that way
+- ✅ **Enable HTTPS** - Always use HTTPS in production environments
+- ✅ **Regular password rotation** - Change passwords every 3-6 months
+- ✅ **Use password managers** - Store passwords securely (1Password, LastPass, etc.)
+- ✅ **Monitor failed logins** - Check for unusual login attempt patterns
+- ✅ **Clear browser data** - When using shared/public computers
+- ✅ **Review AI provider policies** - Understand how your data is handled
+- ✅ **Use incognito mode** - For sensitive documents on shared devices
+
+### Example Strong Passwords
+```
+❌ WEAK: test123, password, admin, 123456
+✅ STRONG: H@d3sCh@t!2024$Secure, mK9#pL2$vN8@xQ5&zR7^
+```
 
 ## ❓ FAQ
 
