@@ -39,6 +39,9 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
+# Password Protection (Required)
+VITE_APP_PASSWORD=test123
+
 # At least one API key is required
 
 # Groq API (Recommended - Fast and Free tier available)
@@ -58,6 +61,9 @@ VITE_SITE_URL=http://localhost:5173
 VITE_SITE_NAME=ChatBotX
 ```
 
+**Important Notes:**
+- **VITE_APP_PASSWORD**: Set this to protect your application with a password. Users must enter this password before accessing the website. Default is `test123` if not set.
+
 **Get your API keys:**
 - **Groq**: https://console.groq.com/ (Free tier available!)
 - **OpenRouter**: https://openrouter.ai/keys (Many free models!)
@@ -70,7 +76,14 @@ VITE_SITE_NAME=ChatBotX
 npm run dev
 ```
 
-### 4. Start Chatting!
+### 4. Login with Password
+
+When you first access the application, you'll be prompted to enter a password:
+- Enter the password you set in `VITE_APP_PASSWORD` (default: `test123`)
+- The session will remain authenticated until you close the browser tab
+- Password is required on every new browser session for security
+
+### 5. Start Chatting!
 
 1. Create a new chat session
 2. Select your preferred AI model
@@ -374,6 +387,13 @@ Contributions are welcome! Please follow the guidelines in [AGENTS.md](./AGENTS.
 
 ## 🔐 Security & Privacy
 
+### Password Protection
+- Application is protected with a password set in `.env` file
+- Password must be entered on first access
+- Authentication persists in browser session storage
+- Session is cleared when browser tab is closed
+- **Change the default password in production!**
+
 ### Data Storage
 - All data stored locally in browser IndexedDB
 - No server-side storage or database
@@ -387,6 +407,7 @@ Contributions are welcome! Please follow the guidelines in [AGENTS.md](./AGENTS.
 - Document content sent to AI providers only during generation
 
 ### Best Practices
+- **Change VITE_APP_PASSWORD from default value**
 - Use `.env` file for API keys (never commit)
 - Clear browser data when using shared computers
 - Review AI provider privacy policies
