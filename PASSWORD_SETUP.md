@@ -9,6 +9,9 @@ Di root folder project, buat file bernama `.env`:
 ```bash
 # File: .env
 VITE_APP_PASSWORD=your_secure_password_here
+
+# Aktifkan/Nonaktifkan password protection
+VITE_ENABLE_PASSWORD_PROTECTION=true
 ```
 
 ### 2. Ganti Password Default
@@ -20,6 +23,47 @@ VITE_APP_PASSWORD=your_secure_password_here
 ```bash
 npm run dev
 ```
+
+---
+
+## 🎛️ Fitur Baru: Toggle Password Protection
+
+Sekarang Anda bisa **mengaktifkan atau menonaktifkan** password protection melalui `.env`:
+
+### ✅ Aktifkan Password Protection (Default)
+```bash
+VITE_ENABLE_PASSWORD_PROTECTION=true
+VITE_APP_PASSWORD=your_password_here
+```
+- User harus login dengan password
+- Semua fitur keamanan aktif
+- **Recommended untuk production**
+
+### 🔓 Nonaktifkan Password Protection
+```bash
+VITE_ENABLE_PASSWORD_PROTECTION=false
+```
+- Langsung akses aplikasi tanpa login
+- Tidak ada security layer
+- **Untuk development/demo saja**
+
+### 📋 Kapan Menggunakan?
+
+**AKTIFKAN (`true`):**
+- ✅ Production/Live server
+- ✅ Staging/Testing environment
+- ✅ Multi-user access
+- ✅ Data sensitif
+
+**NONAKTIFKAN (`false`):**
+- ✅ Local development
+- ✅ Demo/Presentation
+- ✅ Rapid testing
+- ✅ Automated testing
+
+**⚠️ WARNING:** Jangan disable di production!
+
+**Dokumentasi lengkap:** Lihat `PASSWORD_TOGGLE_FEATURE.md`
 
 ---
 
@@ -199,7 +243,7 @@ cat .env
 
 ```
 hadeschat/
-├── .env                    # ← Password disimpan di sini
+├── .env                    # ← Password & settings di sini
 ├── .env.example           # Template (optional)
 ├── .gitignore             # ← Pastikan .env ada di sini
 ├── src/
@@ -210,10 +254,36 @@ hadeschat/
 
 ---
 
+## 🔄 Toggle Password: Use Cases
+
+### Scenario 1: Development
+```bash
+# .env (local development)
+VITE_ENABLE_PASSWORD_PROTECTION=false  # No password needed
+```
+
+### Scenario 2: Team Testing
+```bash
+# .env (shared testing)
+VITE_ENABLE_PASSWORD_PROTECTION=true
+VITE_APP_PASSWORD=team_test_123
+```
+
+### Scenario 3: Production
+```bash
+# Environment variables (Vercel/Netlify)
+VITE_ENABLE_PASSWORD_PROTECTION=true
+VITE_APP_PASSWORD=SuperSecure!Pass789
+```
+
+---
+
 ## 🎯 Checklist Setup
 
 - [ ] Buat file `.env` di root folder
 - [ ] Set `VITE_APP_PASSWORD` dengan password kuat
+- [ ] Set `VITE_ENABLE_PASSWORD_PROTECTION=true` untuk production
+- [ ] Set `VITE_ENABLE_PASSWORD_PROTECTION=false` untuk development (optional)
 - [ ] Verify `.env` ada di `.gitignore`
 - [ ] Test login dengan password baru
 - [ ] Test rate limiting
@@ -296,8 +366,10 @@ Simpan log password lama untuk reference:
 ## 📞 Support
 
 Butuh bantuan? Cek dokumentasi lengkap:
+- `PASSWORD_TOGGLE_FEATURE.md` - **NEW!** Enable/disable password protection
 - `SECURITY_FEATURES.md` - Fitur keamanan detail
 - `PANDUAN_KEAMANAN.md` - Panduan keamanan lengkap
+- `TROUBLESHOOTING.md` - Troubleshooting guide
 - `README.md` - Dokumentasi utama
 
 ---
@@ -323,7 +395,7 @@ npm run dev
 ---
 
 **Last Updated:** December 2024  
-**Version:** 2.0.0 (Security Overhaul)  
+**Version:** 2.1.0 (Security Overhaul + Toggle Feature)  
 **Status:** ✅ Production Ready
 
-🎉 **Selamat! Password protection Anda sekarang sangat aman!** 🔒
+🎉 **Selamat! Password protection Anda sekarang sangat aman dan fleksibel!** 🔒

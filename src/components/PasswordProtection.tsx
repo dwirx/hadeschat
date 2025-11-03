@@ -7,6 +7,23 @@ interface PasswordProtectionProps {
     children: React.ReactNode;
 }
 
+// Cek apakah password protection diaktifkan via .env
+const isPasswordProtectionEnabled = () => {
+    const envValue = import.meta.env.VITE_ENABLE_PASSWORD_PROTECTION;
+
+    // Jika tidak di-set, default adalah true (enabled)
+    if (envValue === undefined || envValue === null || envValue === "") {
+        return true;
+    }
+
+    // Parse string ke boolean
+    if (typeof envValue === "string") {
+        return envValue.toLowerCase() === "true" || envValue === "1";
+    }
+
+    return Boolean(envValue);
+};
+
 // Konstanta keamanan
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 menit dalam milliseconds
@@ -100,6 +117,15 @@ function decryptData(encrypted: string, salt: string): string {
 }
 
 export const PasswordProtection = ({ children }: PasswordProtectionProps) => {
+    // Cek apakah password protection aktif
+    const passwordEnabled = isPasswordProtectionEnabled();
+
+    // Jika disabled, langsung render children
+    if (!passwordEnabled) {
+        console.log("🔓 Password protection disabled via .env");
+        return <>{children}</>;
+    }
+
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");

@@ -1,7 +1,47 @@
 # Changelog
 
-All notable changes to ChatBotX will be documented in this file.
+All notable changes to HadesChat will be documented in this file.
 
+## [2.1.0] - 2024-12-XX
+
+### 🎉 New Features
+- **Toggle Password Protection**: Dapat mengaktifkan/menonaktifkan password protection melalui `.env`
+  - Environment variable: `VITE_ENABLE_PASSWORD_PROTECTION` (true/false)
+  - Default: enabled (true) untuk keamanan
+  - Berguna untuk development, demo, dan testing
+  - Dokumentasi lengkap di `PASSWORD_TOGGLE_FEATURE.md` dan `CARA_TOGGLE_PASSWORD.md`
+
+### 🔒 Security Improvements
+- Password hashing dengan SHA-256 + fallback untuk kompatibilitas browser
+- Rate limiting: Max 5 percobaan login, lockout 15 menit
+- Session timeout otomatis (60 menit)
+- Encrypted session storage dengan random tokens
+- Anti-bypass protection (deteksi manipulasi console/storage)
+- Timing attack prevention
+- DevTools detection
+- Storage manipulation detection
+
+### 🐛 Bug Fixes
+- Fix error "Cannot read properties of undefined (reading 'digest')" di browser yang tidak support Web Crypto API
+- Tambah fallback hash mechanism untuk kompatibilitas maksimal
+- Fix crypto.getRandomValues error dengan fallback pseudo-random generator
+
+### 📚 Documentation
+- `SECURITY_FEATURES.md` - Dokumentasi lengkap fitur keamanan
+- `PANDUAN_KEAMANAN.md` - Panduan keamanan dalam Bahasa Indonesia
+- `PASSWORD_TOGGLE_FEATURE.md` - Panduan toggle password protection
+- `CARA_TOGGLE_PASSWORD.md` - Panduan singkat toggle (Bahasa Indonesia)
+- `TROUBLESHOOTING.md` - Panduan troubleshooting 14+ masalah umum
+- Update `PASSWORD_SETUP.md` dengan fitur baru
+- Update `README.md` dengan informasi keamanan
+
+### 🔧 Technical Changes
+- Refactor `PasswordProtection.tsx` dengan security best practices
+- Tambah environment variable `VITE_ENABLE_PASSWORD_PROTECTION`
+- Improved error handling dan user feedback
+- Better browser compatibility
+
+## [Unreleased]
 ## [1.3.0] - 2025 - Agent Mode Relocation & Copy Markdown Feature
 
 ### 🚀 New Features
