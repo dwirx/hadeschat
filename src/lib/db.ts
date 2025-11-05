@@ -1,11 +1,13 @@
 // IndexedDB service for session management
 
 const DB_NAME = "ChatBotDB";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SESSIONS_STORE = "sessions";
 const MESSAGES_STORE = "messages";
 const AGENT_SESSIONS_STORE = "agentSessions";
 const AGENT_RESPONSES_STORE = "agentResponses";
+const COUNCIL_SESSIONS_STORE = "councilSessions";
+const COUNCIL_RESPONSES_STORE = "councilResponses";
 
 export interface Session {
     id: string;
@@ -61,6 +63,42 @@ export interface Message {
         ttft?: string;
         tokens?: string;
         speed?: string;
+    };
+}
+
+export interface CouncilSession {
+    id: string;
+    sessionId: string;
+    userQuery: string;
+    timestamp: number;
+    members: Array<{
+        role: string;
+        name: string;
+        provider: string;
+        modelId: string;
+        modelName: string;
+    }>;
+    phase:
+        | "research"
+        | "presentation"
+        | "deliberation"
+        | "synthesis"
+        | "completed";
+    finalSynthesis?: string;
+}
+
+export interface CouncilResponseDB {
+    id: string;
+    councilSessionId: string;
+    role: string;
+    memberName: string;
+    content: string;
+    timestamp: number;
+    provider: string;
+    modelName: string;
+    metadata?: {
+        tokensUsed?: number;
+        generationTime?: number;
     };
 }
 
@@ -130,6 +168,46 @@ class ChatDB {
                     agentResponsesStore.createIndex("timestamp", "timestamp", {
                         unique: false,
                     });
+                }
+
+                // Create council sessions store
+                if (!db.objectStoreNames.contains(COUNCIL_SESSIONS_STORE)) {
+                    const councilSessionsStore = db.createObjectStore(
+                        COUNCIL_SESSIONS_STORE,
+                        {
+                            keyPath: "id",
+                        },
+                    );
+                    councilSessionsStore.createIndex("sessionId", "sessionId", {
+                        unique: false,
+                    });
+                    councilSessionsStore.createIndex("timestamp", "timestamp", {
+                        unique: false,
+                    });
+                }
+
+                // Create council responses store
+                if (!db.objectStoreNames.contains(COUNCIL_RESPONSES_STORE)) {
+                    const councilResponsesStore = db.createObjectStore(
+                        COUNCIL_RESPONSES_STORE,
+                        {
+                            keyPath: "id",
+                        },
+                    );
+                    councilResponsesStore.createIndex(
+                        "councilSessionId",
+                        "councilSessionId",
+                        {
+                            unique: false,
+                        },
+                    );
+                    councilResponsesStore.createIndex(
+                        "timestamp",
+                        "timestamp",
+                        {
+                            unique: false,
+                        },
+                    );
                 }
             };
         });
@@ -296,6 +374,8 @@ class ChatDB {
                     MESSAGES_STORE,
                     AGENT_SESSIONS_STORE,
                     AGENT_RESPONSES_STORE,
+                    COUNCIL_SESSIONS_STORE,
+                    COUNCIL_RESPONSES_STORE,
                 ],
                 "readwrite",
             );
@@ -307,11 +387,19 @@ class ChatDB {
             const agentResponsesStore = transaction.objectStore(
                 AGENT_RESPONSES_STORE,
             );
+            const councilSessionsStore = transaction.objectStore(
+                COUNCIL_SESSIONS_STORE,
+            );
+            const councilResponsesStore = transaction.objectStore(
+                COUNCIL_RESPONSES_STORE,
+            );
 
             sessionsStore.clear();
             messagesStore.clear();
             agentSessionsStore.clear();
             agentResponsesStore.clear();
+            councilSessionsStore.clear();
+            councilResponsesStore.clear();
 
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
@@ -462,6 +550,158 @@ class ChatDB {
             request.onerror = () => reject(request.error);
         });
     }
+
+    // Council Session operations
+    async saveCouncilSession(session: CouncilSession): Promise<void> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_SESSIONS_STORE],
+                "readwrite",
+            );
+            const store = transaction.objectStore(COUNCIL_SESSIONS_STORE);
+            const request = store.put(session);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getCouncilSession(id: string): Promise<CouncilSession | null> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_SESSIONS_STORE],
+                "readonly",
+            );
+            const store = transaction.objectStore(COUNCIL_SESSIONS_STORE);
+            const request = store.get(id);
+
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getCouncilSessionsBySessionId(
+        sessionId: string,
+    ): Promise<CouncilSession[]> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_SESSIONS_STORE],
+                "readonly",
+            );
+            const store = transaction.objectStore(COUNCIL_SESSIONS_STORE);
+            const index = store.index("sessionId");
+            const request = index.getAll(IDBKeyRange.only(sessionId));
+
+            request.onsuccess = () => {
+                const sessions = request.result as CouncilSession[];
+                resolve(sessions.sort((a, b) => a.timestamp - b.timestamp));
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async deleteCouncilSession(id: string): Promise<void> {
+        if (!this.db) await this.init();
+
+        // Delete all responses for this council session first
+        await this.deleteCouncilResponsesBySession(id);
+
+        // Then delete the session
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_SESSIONS_STORE],
+                "readwrite",
+            );
+            const store = transaction.objectStore(COUNCIL_SESSIONS_STORE);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // Council Response operations
+    async saveCouncilResponse(response: CouncilResponseDB): Promise<void> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_RESPONSES_STORE],
+                "readwrite",
+            );
+            const store = transaction.objectStore(COUNCIL_RESPONSES_STORE);
+            const request = store.put(response);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async getCouncilResponsesBySession(
+        councilSessionId: string,
+    ): Promise<CouncilResponseDB[]> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_RESPONSES_STORE],
+                "readonly",
+            );
+            const store = transaction.objectStore(COUNCIL_RESPONSES_STORE);
+            const index = store.index("councilSessionId");
+            const request = index.getAll(IDBKeyRange.only(councilSessionId));
+
+            request.onsuccess = () => {
+                const responses = request.result as CouncilResponseDB[];
+                resolve(responses.sort((a, b) => a.timestamp - b.timestamp));
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async deleteCouncilResponsesBySession(
+        councilSessionId: string,
+    ): Promise<void> {
+        if (!this.db) await this.init();
+        return new Promise((resolve, reject) => {
+            const transaction = this.db!.transaction(
+                [COUNCIL_RESPONSES_STORE],
+                "readwrite",
+            );
+            const store = transaction.objectStore(COUNCIL_RESPONSES_STORE);
+            const index = store.index("councilSessionId");
+            const request = index.openCursor(
+                IDBKeyRange.only(councilSessionId),
+            );
+
+            request.onsuccess = (event) => {
+                const cursor = (event.target as IDBRequest).result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
 }
 
 export const chatDB = new ChatDB();
+
+// Export convenience functions
+export const saveCouncilSession = (session: CouncilSession) =>
+    chatDB.saveCouncilSession(session);
+export const getCouncilSession = (id: string) => chatDB.getCouncilSession(id);
+export const getCouncilSessionsBySessionId = (sessionId: string) =>
+    chatDB.getCouncilSessionsBySessionId(sessionId);
+export const deleteCouncilSession = (id: string) =>
+    chatDB.deleteCouncilSession(id);
+export const saveCouncilResponse = (response: CouncilResponseDB) =>
+    chatDB.saveCouncilResponse(response);
+export const getCouncilResponsesBySession = (councilSessionId: string) =>
+    chatDB.getCouncilResponsesBySession(councilSessionId);
+export const deleteCouncilResponsesBySession = (councilSessionId: string) =>
+    chatDB.deleteCouncilResponsesBySession(councilSessionId);

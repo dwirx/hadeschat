@@ -70,6 +70,7 @@ interface ChatSidebarProps {
     onNewSession?: (provider: Provider, modelId: string) => void;
     onOpenAgentMode?: () => void;
     onOpenASSDebateMode?: () => void;
+    onOpenCouncilMode?: () => void;
 }
 
 interface GroupedSessions {
@@ -85,6 +86,7 @@ export const ChatSidebar = ({
     onNewSession,
     onOpenAgentMode,
     onOpenASSDebateMode,
+    onOpenCouncilMode,
 }: ChatSidebarProps) => {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [expandedProvider, setExpandedProvider] = useState<Provider | null>(
@@ -758,6 +760,19 @@ export const ChatSidebar = ({
                                                     <Users className="w-3 h-3" />
                                                     <span className="hidden sm:inline">
                                                         Debate
+                                                    </span>
+                                                </Button>
+                                            )}
+                                            {onOpenCouncilMode && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={onOpenCouncilMode}
+                                                    className="h-7 text-[10px] lg:text-xs gap-1"
+                                                >
+                                                    <Users className="w-3 h-3" />
+                                                    <span className="hidden sm:inline">
+                                                        Council
                                                     </span>
                                                 </Button>
                                             )}

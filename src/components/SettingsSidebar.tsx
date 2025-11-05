@@ -6,6 +6,7 @@ import {
     ChevronRight,
     Zap,
     MessagesSquare,
+    Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ interface SettingsSidebarProps {
     onClose: () => void;
     onOpenAgentMode?: () => void;
     onOpenASSDebateMode?: () => void;
+    onOpenCouncilMode?: () => void;
 }
 
 export const SettingsSidebar = ({
@@ -31,6 +33,7 @@ export const SettingsSidebar = ({
     onClose,
     onOpenAgentMode,
     onOpenASSDebateMode,
+    onOpenCouncilMode,
 }: SettingsSidebarProps) => {
     const [ragEnabled, setRagEnabled] = useState(false);
 
@@ -136,6 +139,29 @@ export const SettingsSidebar = ({
                                         </div>
                                         <div className="text-xs opacity-90">
                                             Multi-perspective debates
+                                        </div>
+                                    </div>
+                                </Button>
+
+                                {/* Council Mode Button */}
+                                <Button
+                                    onClick={() => {
+                                        onOpenCouncilMode?.();
+                                        onClose();
+                                    }}
+                                    className="w-full justify-start gap-3 h-auto py-4 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md hover:shadow-lg transition-all"
+                                    size="lg"
+                                >
+                                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20">
+                                        <Users className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <div className="font-semibold">
+                                            The Council
+                                        </div>
+                                        <div className="text-xs opacity-90">
+                                            AI deliberative body with 7
+                                            specialized members
                                         </div>
                                     </div>
                                 </Button>

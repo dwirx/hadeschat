@@ -3,6 +3,7 @@ import { ChatSidebar } from "@/components/ChatSidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { AgentMode } from "@/components/AgentMode";
 import { ASSDebateMode } from "@/components/ASSDebateMode";
+import { CouncilMode } from "@/components/CouncilMode";
 import { SettingsSidebar } from "@/components/SettingsSidebar";
 
 import { chatDB, Session } from "@/lib/db";
@@ -32,6 +33,7 @@ const Index = () => {
     const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
     const [showAgentMode, setShowAgentMode] = useState(false);
     const [showASSDebateMode, setShowASSDebateMode] = useState(false);
+    const [showCouncilMode, setShowCouncilMode] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false);
 
@@ -188,6 +190,7 @@ const Index = () => {
                 onNewSession={handleNewSession}
                 onOpenAgentMode={() => setShowAgentMode(true)}
                 onOpenASSDebateMode={() => setShowASSDebateMode(true)}
+                onOpenCouncilMode={() => setShowCouncilMode(true)}
             />
             <div className="flex-1 flex flex-col relative">
                 <ChatArea
@@ -205,6 +208,7 @@ const Index = () => {
                 onClose={() => setSettingsSidebarOpen(false)}
                 onOpenAgentMode={() => setShowAgentMode(true)}
                 onOpenASSDebateMode={() => setShowASSDebateMode(true)}
+                onOpenCouncilMode={() => setShowCouncilMode(true)}
             />
 
             {/* Agent Mode Dialog */}
@@ -213,10 +217,26 @@ const Index = () => {
                 onClose={() => setShowAgentMode(false)}
             />
 
+            {/* ASS Debate Mode Dialog */}
             <ASSDebateMode
                 isOpen={showASSDebateMode}
                 onClose={() => setShowASSDebateMode(false)}
             />
+
+            {/* Council Mode Dialog */}
+            <Dialog open={showCouncilMode} onOpenChange={setShowCouncilMode}>
+                <DialogContent
+                    className="max-w-[95vw] w-full h-[90vh] p-0"
+                    aria-describedby={undefined}
+                >
+                    <DialogTitle className="sr-only">
+                        The Council - AI Deliberative Body
+                    </DialogTitle>
+                    <CouncilMode
+                        sessionId={currentSessionId || `council-${Date.now()}`}
+                    />
+                </DialogContent>
+            </Dialog>
 
             {/* Welcome Dialog for first time users */}
             <Dialog
