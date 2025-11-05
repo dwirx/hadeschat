@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
     Users,
-    Send,
     Loader2,
     Settings,
     CheckCircle,
@@ -10,9 +9,14 @@ import {
     Globe,
     Power,
     StopCircle,
+    ThumbsUp,
+    ThumbsDown,
+    AlertTriangle,
+    TrendingUp,
+    Award,
+    MessageSquare,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
     CouncilMember,
     CouncilRole,
@@ -20,6 +24,7 @@ import {
     CouncilOrchestrator,
     createDefaultCouncil,
     validateCouncilConfig,
+    validateSynthesisQuality,
     COUNCIL_ROLES,
 } from "@/lib/theCouncil";
 import { Provider, aiApi, UnifiedMessage } from "@/lib/aiApi";
@@ -36,7 +41,7 @@ import {
 const LANG = {
     en: {
         title: "The Council",
-        subtitle: "AI Deliberative Body",
+        subtitle: "Enhanced AI Deliberative System",
         config: "Council Configuration",
         submit: "Submit your query to The Council",
         placeholder: "Enter your question or topic for deliberation...",
@@ -48,10 +53,16 @@ const LANG = {
         finalSynthesis: "Final Council Synthesis",
         enabled: "Enabled",
         respondIn: "Respond in",
+        consensus: "Consensus",
+        voting: "Voting Results",
+        conflicts: "Conflicts Resolved",
+        quality: "Synthesis Quality",
+        expertise: "Expertise",
+        weight: "Vote Weight",
     },
     id: {
         title: "Dewan",
-        subtitle: "Badan Deliberatif AI",
+        subtitle: "Sistem Deliberatif AI Terlengkap",
         config: "Konfigurasi Dewan",
         submit: "Kirim pertanyaan Anda ke Dewan",
         placeholder: "Masukkan pertanyaan atau topik untuk deliberasi...",
@@ -63,6 +74,12 @@ const LANG = {
         finalSynthesis: "Sintesis Akhir Dewan",
         enabled: "Aktif",
         respondIn: "Jawab dalam",
+        consensus: "Konsensus",
+        voting: "Hasil Voting",
+        conflicts: "Konflik Terselesaikan",
+        quality: "Kualitas Sintesis",
+        expertise: "Keahlian",
+        weight: "Bobot Suara",
     },
 };
 
@@ -238,6 +255,21 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                         }
 
                         const endTime = Date.now();
+
+                        // Parse structured response
+                        const { keyPoints, concerns, recommendations } =
+                            orc.parseStructuredResponse(fullContent);
+
+                        // Parse vote if present
+                        const vote = orc.parseVote(
+                            fullContent,
+                            role,
+                            member.name,
+                        );
+                        if (vote) {
+                            orc.addVote(vote);
+                        }
+
                         const response: CouncilResponse = {
                             role,
                             memberName: member.name,
@@ -245,8 +277,13 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                             timestamp: Date.now(),
                             provider: member.provider,
                             modelName: member.modelName,
+                            keyPoints,
+                            concerns,
+                            recommendations,
+                            vote,
                             metadata: {
                                 generationTime: endTime - startTime,
+                                confidence: vote?.confidence,
                             },
                         };
 
@@ -266,8 +303,21 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                             metadata: response.metadata,
                         });
 
-                        // If synthesizer, save final synthesis
+                        // If synthesizer, validate quality and save final synthesis
                         if (role === "synthesizer") {
+                            const qualityCheck = validateSynthesisQuality(
+                                fullContent,
+                                orc.getDeliberation().responses,
+                            );
+                            debugLog(
+                                `Synthesis Quality Score: ${qualityCheck.score}%`,
+                            );
+                            if (!qualityCheck.passed) {
+                                debugWarn(
+                                    "Synthesis quality issues:",
+                                    qualityCheck.issues,
+                                );
+                            }
                             orc.setFinalSynthesis(fullContent);
                         }
 
@@ -291,6 +341,9 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                             timestamp: Date.now(),
                             provider: member.provider,
                             modelName: member.modelName,
+                            keyPoints: [],
+                            concerns: [`Error: ${error.message}`],
+                            recommendations: [],
                         };
                         orc.addResponse(errorResponse);
                         setResponses((prev) => [...prev, errorResponse]);
@@ -315,6 +368,11 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                     timestamp: Date.now(),
                     provider: member.provider,
                     modelName: member.modelName,
+                    keyPoints: [],
+                    concerns: [
+                        `Error: ${error instanceof Error ? error.message : String(error)}`,
+                    ],
+                    recommendations: [],
                 };
                 orc.addResponse(errorResponse);
                 setResponses((prev) => [...prev, errorResponse]);
@@ -416,6 +474,10 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                 return;
             }
 
+            // Calculate consensus before synthesis
+            const consensus = newOrchestrator.calculateConsensus();
+            debugLog("Consensus result:", consensus);
+
             // Phase 7: Synthesizer provides final synthesis (always enabled)
             newOrchestrator.setPhase("synthesis");
             if (enabledMembers.synthesizer) {
@@ -460,6 +522,15 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
         if (hasResponded)
             return <CheckCircle className="w-4 h-4 text-green-400" />;
         return <Circle className="w-4 h-4 text-gray-500" />;
+    };
+
+    const getVoteIcon = (vote?: string) => {
+        if (!vote) return null;
+        if (vote.includes("agree"))
+            return <ThumbsUp className="w-4 h-4 text-green-400" />;
+        if (vote.includes("disagree"))
+            return <ThumbsDown className="w-4 h-4 text-red-400" />;
+        return <MessageSquare className="w-4 h-4 text-gray-400" />;
     };
 
     const t = LANG[language];
@@ -529,12 +600,28 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                                 >
                                     <div className="mb-3 flex items-start justify-between">
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-purple-300 text-sm md:text-base break-words">
+                                            <h4 className="font-semibold text-purple-300 text-sm md:text-base break-words flex items-center gap-2">
                                                 {member.name}
+                                                <span className="text-xs bg-purple-900 px-2 py-0.5 rounded">
+                                                    {t.weight}:{" "}
+                                                    {member.votingWeight}x
+                                                </span>
                                             </h4>
                                             <p className="text-xs text-gray-400 mt-1 break-words">
                                                 {member.description}
                                             </p>
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {member.expertise
+                                                    .slice(0, 3)
+                                                    .map((exp) => (
+                                                        <span
+                                                            key={exp}
+                                                            className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-300"
+                                                        >
+                                                            {exp}
+                                                        </span>
+                                                    ))}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2 ml-2 flex-shrink-0">
                                             <Switch
@@ -643,12 +730,17 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                         {roleOrder.map((role) => {
                             const member = members.find((m) => m.role === role);
                             if (!enabledMembers[role]) return null;
+                            const response = responses.find(
+                                (r) => r.role === role,
+                            );
                             return (
                                 <div
                                     key={role}
                                     className="flex items-center gap-1"
                                 >
                                     {getRoleIcon(role)}
+                                    {response?.vote &&
+                                        getVoteIcon(response.vote.vote)}
                                     <span
                                         className={
                                             currentSpeaker === role
@@ -664,6 +756,45 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                     </div>
                 </div>
             )}
+
+            {/* Consensus Display */}
+            {orchestrator &&
+                orchestrator.getDeliberation().votes.length > 0 && (
+                    <div className="p-3 md:p-4 border-b border-purple-700 bg-purple-900/20 flex-shrink-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="w-4 h-4 text-purple-400" />
+                            <h3 className="text-sm font-semibold text-purple-300">
+                                {t.consensus}
+                            </h3>
+                        </div>
+                        {(() => {
+                            const consensus = orchestrator.calculateConsensus();
+                            return (
+                                <div className="space-y-1 text-xs md:text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 bg-gray-700 rounded-full h-2">
+                                            <div
+                                                className="bg-green-500 h-2 rounded-full transition-all"
+                                                style={{
+                                                    width: `${consensus.agreementLevel * 100}%`,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="text-gray-300 font-medium">
+                                            {Math.round(
+                                                consensus.agreementLevel * 100,
+                                            )}
+                                            %
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-400">
+                                        {consensus.summary}
+                                    </p>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
 
             {/* Deliberation Responses */}
             <div
@@ -692,10 +823,78 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                                         ` • ${(response.metadata.generationTime / 1000).toFixed(1)}s`}
                                 </p>
                             </div>
-                            <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300 self-start flex-shrink-0">
-                                {response.role}
-                            </span>
+                            <div className="flex items-center gap-2">
+                                {response.vote && (
+                                    <div className="flex items-center gap-1 text-xs bg-gray-700 px-2 py-1 rounded">
+                                        {getVoteIcon(response.vote.vote)}
+                                        <span>
+                                            {Math.round(
+                                                response.vote.confidence * 100,
+                                            )}
+                                            %
+                                        </span>
+                                    </div>
+                                )}
+                                <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300 self-start flex-shrink-0">
+                                    {response.role}
+                                </span>
+                            </div>
                         </div>
+
+                        {/* Key Points, Concerns, Recommendations */}
+                        {(response.keyPoints.length > 0 ||
+                            response.concerns.length > 0 ||
+                            response.recommendations.length > 0) && (
+                            <div className="mb-3 space-y-2 text-xs">
+                                {response.keyPoints.length > 0 && (
+                                    <details className="bg-gray-900/50 rounded p-2">
+                                        <summary className="cursor-pointer text-blue-300 font-medium">
+                                            Key Points (
+                                            {response.keyPoints.length})
+                                        </summary>
+                                        <ul className="mt-1 space-y-1 ml-4 text-gray-300">
+                                            {response.keyPoints.map(
+                                                (point, i) => (
+                                                    <li key={i}>• {point}</li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </details>
+                                )}
+                                {response.concerns.length > 0 && (
+                                    <details className="bg-gray-900/50 rounded p-2">
+                                        <summary className="cursor-pointer text-yellow-300 font-medium flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3" />
+                                            Concerns ({response.concerns.length}
+                                            )
+                                        </summary>
+                                        <ul className="mt-1 space-y-1 ml-4 text-gray-300">
+                                            {response.concerns.map(
+                                                (concern, i) => (
+                                                    <li key={i}>• {concern}</li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </details>
+                                )}
+                                {response.recommendations.length > 0 && (
+                                    <details className="bg-gray-900/50 rounded p-2">
+                                        <summary className="cursor-pointer text-green-300 font-medium">
+                                            Recommendations (
+                                            {response.recommendations.length})
+                                        </summary>
+                                        <ul className="mt-1 space-y-1 ml-4 text-gray-300">
+                                            {response.recommendations.map(
+                                                (rec, i) => (
+                                                    <li key={i}>• {rec}</li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </details>
+                                )}
+                            </div>
+                        )}
+
                         <div className="prose prose-sm md:prose prose-invert max-w-none break-words overflow-x-auto">
                             <MarkdownRenderer content={response.content} />
                         </div>
@@ -742,9 +941,62 @@ export function CouncilMode({ sessionId }: CouncilModeProps) {
                 {orchestrator?.getDeliberation().phase === "completed" && (
                     <div className="bg-gradient-to-r from-purple-900 to-blue-900 rounded-lg border-2 border-purple-500 p-4 md:p-6 shadow-2xl w-full">
                         <h3 className="text-lg md:text-xl font-bold text-purple-200 mb-4 flex items-start space-x-2">
-                            <CheckCircle className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5" />
+                            <Award className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0 mt-0.5" />
                             <span>{t.finalSynthesis}</span>
                         </h3>
+
+                        {/* Quality Score */}
+                        {(() => {
+                            const synthesis =
+                                orchestrator.getDeliberation().finalSynthesis ||
+                                "";
+                            const quality = validateSynthesisQuality(
+                                synthesis,
+                                orchestrator.getDeliberation().responses,
+                            );
+                            return (
+                                <div className="mb-4 bg-purple-950/50 rounded p-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-purple-300">
+                                            {t.quality}
+                                        </span>
+                                        <span
+                                            className={`text-sm font-bold ${
+                                                quality.score >= 80
+                                                    ? "text-green-400"
+                                                    : quality.score >= 70
+                                                      ? "text-yellow-400"
+                                                      : "text-red-400"
+                                            }`}
+                                        >
+                                            {quality.score}%
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2">
+                                        <div
+                                            className={`h-2 rounded-full transition-all ${
+                                                quality.score >= 80
+                                                    ? "bg-green-500"
+                                                    : quality.score >= 70
+                                                      ? "bg-yellow-500"
+                                                      : "bg-red-500"
+                                            }`}
+                                            style={{
+                                                width: `${quality.score}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    {quality.issues.length > 0 && (
+                                        <div className="mt-2 text-xs text-gray-400">
+                                            {quality.issues.map((issue, i) => (
+                                                <div key={i}>• {issue}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         <div className="prose prose-sm md:prose prose-invert max-w-none text-gray-100 break-words overflow-x-auto">
                             <MarkdownRenderer
                                 content={
