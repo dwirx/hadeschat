@@ -127,7 +127,7 @@ export const ASSDebateMode = ({ isOpen, onClose }: ASSDebateModeProps) => {
     // Load models from all provider hooks (DYNAMIC - syncs with Chat/Agent modes)
     const { models: groqModels } = useGroqModels();
     const { models: togetherModelsData } = useTogetherModels();
-    const { models: openrouterModels } = useOpenRouterModels();
+    const { freeModels: openrouterModels } = useOpenRouterModels();
 
     // Get all models from aiApi (includes static POE models)
     const allModels = aiApi.getAllModels();
@@ -1772,10 +1772,24 @@ You are part of ${team.name}. Coordinate with your teammates and build upon thei
                                                     onProviderChange={(
                                                         newProvider,
                                                     ) => {
-                                                        const firstModel =
+                                                        const models =
                                                             modelOptions[
                                                                 newProvider
-                                                            ][0].id;
+                                                            ];
+                                                        if (
+                                                            !models ||
+                                                            models.length === 0
+                                                        ) {
+                                                            toast({
+                                                                title: "Provider Tidak Tersedia",
+                                                                description: `Provider ${newProvider} tidak memiliki model yang tersedia saat ini.`,
+                                                                variant:
+                                                                    "destructive",
+                                                            });
+                                                            return;
+                                                        }
+                                                        const firstModel =
+                                                            models[0].id;
                                                         updateCharacterModel(
                                                             personality,
                                                             newProvider,

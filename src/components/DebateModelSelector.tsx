@@ -57,13 +57,9 @@ export function DebateModelSelector({
     }, [currentModels, searchQuery]);
 
     const handleProviderChange = (newProvider: Provider) => {
-        const firstModel = modelOptions[newProvider]?.[0]?.id;
-        if (firstModel) {
-            onProviderChange(newProvider);
-            onModelChange(firstModel);
-            setSearchQuery("");
-            setIsSearchOpen(false);
-        }
+        setSearchQuery("");
+        setIsSearchOpen(false);
+        onProviderChange(newProvider);
     };
 
     const handleModelSelect = (newModelId: string) => {
@@ -98,12 +94,17 @@ export function DebateModelSelector({
                 {/* Provider Selection */}
                 <div className="space-y-1">
                     <Label className="text-[10px] sm:text-xs">Provider</Label>
-                    <Select value={provider} onValueChange={handleProviderChange}>
+                    <Select
+                        value={provider}
+                        onValueChange={handleProviderChange}
+                    >
                         <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="poe">POE (Multi-Model)</SelectItem>
+                            <SelectItem value="poe">
+                                POE (Multi-Model)
+                            </SelectItem>
                             <SelectItem value="groq">GROQ (Fast)</SelectItem>
                             <SelectItem value="together">
                                 Together AI (Powerful)
@@ -129,7 +130,9 @@ export function DebateModelSelector({
                                     <Input
                                         placeholder="Search models..."
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onChange={(e) =>
+                                            setSearchQuery(e.target.value)
+                                        }
                                         className="h-7 pl-7 pr-7 text-xs"
                                         onClick={(e) => e.stopPropagation()}
                                     />
@@ -322,7 +325,9 @@ export function DebateModelSelector({
                                 return (
                                     <button
                                         key={model.id}
-                                        onClick={() => handleModelSelect(model.id)}
+                                        onClick={() =>
+                                            handleModelSelect(model.id)
+                                        }
                                         className={cn(
                                             "w-full text-left p-2.5 sm:p-3 rounded-md transition-colors",
                                             "hover:bg-accent border",
@@ -372,7 +377,10 @@ export function DebateModelSelector({
                         </Badge>
                         <div className="flex-1 min-w-0">
                             <div className="text-xs sm:text-sm font-medium truncate">
-                                {currentModels.find((m) => m.id === modelId)?.name}
+                                {
+                                    currentModels.find((m) => m.id === modelId)
+                                        ?.name
+                                }
                             </div>
                             <div className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
                                 {modelId}
